@@ -1,69 +1,49 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import axios from "../../../node_modules/axios/dist/axios.js";
+import { connect } from "react-redux";
+import { AddTodos, DeleteTodos, UpdateTodos } from "../../Store/action/todos";
 import Table from "../TABEL/Tabel";
 
-const Form = () => {
+const Form = (props) => {
+  const { todos, addTodos, deleteTodos, updateTodos } = props;
   const [data, setData] = useState([]);
-  const [update, setUpdate] = useState({});
-
+  const [id, setId] = useState(null);
   useEffect(() => {
-    const getData = () => {
-      axios
-        .get("http://localhost:3000/todo")
-        .then((respone) => {
-          console.log(respone.data);
-          setData(respone.data);
-        })
-        .catch((errors) => {
-          // console.log(errors)
-        });
-    };
-    getData();
-  }, []);
+    setData(todos);
+  }, [todos, id]);
 
-  const { handleSubmit, register, errors } = useForm();
-  const onSubmit = (values, e) => {
-    axios
-      .post("http://localhost:3000/todo", values)
-      .then((respone) => {
-        // console.log('data masuk', respone.data)
-        setData([...data, respone.data]);
-      })
-      .catch((errors) => {
-        // console.log('post error')
-      });
+  const { handleSubmit, register, errors, setValue } = useForm();
+  const onSubmit = (value, e) => {
+    if (id !== null) {
+      const obj = {
+        id,
+        value,
+      };
+      updateTodos(obj);
+      setId(null);
+    } else {
+      addTodos(value);
+    }
     e.target.reset();
   };
 
   const onRemove = (id) => {
-    axios
-      .delete(`http://localhost:3000/todo/${id}`)
-      .then((respone) => {
-        const newData = data.filter((item) => {
-          if (item.id === id) return false;
-          return true;
-        });
-        setData(newData);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
+    deleteTodos(id);
   };
 
   const onUpdate = (id) => {
-    const newDay = prompt("create new day");
-    const newActivites = prompt("create activites");
-
-    // setUpdate(Data)
-    axios
-      .put(`http://localhost:3000/todo/${id}`, { newDay, newActivites })
-      .then((respone) => {
-        console.log("berhasil update");
-      })
-      .catch((error) => {
-        console.log(error);
+    setId(id);
+    const findItem = data.find((item) => item.id === id);
+    if (findItem) {
+      setValue("list", findItem.list, {
+        shouldValidate: true,
+        shouldDirty: true,
       });
+      setValue("Activites", findItem.Activites, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
   };
 
   return (
@@ -83,7 +63,7 @@ const Form = () => {
           />
           {errors.list && errors.list.message}
           <br />
-          <label htmlFor="list">Activites:</label>
+          <label htmlFor="Activites">Activites:</label>
           <input
             type="text"
             name="Activites"
@@ -96,7 +76,7 @@ const Form = () => {
           {errors.list && errors.list.message}
           <br />
           <button type="submit" className="btn btn-success">
-            Submit
+            {id ? "update" : "Create"}
           </button>
         </form>
       </div>
@@ -106,4 +86,17 @@ const Form = () => {
   );
 };
 
-export default Form;
+const mapStateToProps = (state) => {
+  return {
+    todos: state.todos,
+  };
+};
+
+const mapDispatchToProps = (dispatch) => {
+  return {
+    addTodos: (value) => dispatch(AddTodos(value)),
+    deleteTodos: (id) => dispatch(DeleteTodos(id)),
+    updateTodos: (value) => dispatch(UpdateTodos(value)),
+  };
+};
+export default connect(mapStateToProps, mapDispatchToProps)(Form);
